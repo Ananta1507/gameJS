@@ -14,7 +14,6 @@
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden;
       background: linear-gradient(135deg, #1f1f1f, #383838);
       display: flex;
       justify-content: center;
@@ -22,13 +21,12 @@
       color: #fff;
     }
     canvas {
-      max-width: 95vw;
-      max-height: 80vh;
-      width: 800px;
-      height: 600px;
       border: 2px solid #32cd32;
       background: #222;
       border-radius: 8px;
+      width: 95vw;
+      height: 80vh;
+      touch-action: none;
     }
     .card {
       position: absolute;
@@ -67,30 +65,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const originalWidth = 800;
-    const originalHeight = 600;
-
-    function resizeCanvas() {
-      const ratio = originalWidth / originalHeight;
-      const w = window.innerWidth * 0.95;
-      const h = window.innerHeight * 0.8;
-      let newWidth, newHeight;
-
-      if (w / h < ratio) {
-        newWidth = w;
-        newHeight = w / ratio;
-      } else {
-        newHeight = h;
-        newWidth = h * ratio;
-      }
-
-      canvas.style.width = `${newWidth}px`;
-      canvas.style.height = `${newHeight}px`;
-    }
-
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
     const slingOrigin = { x: 150, y: 300 };
     const projectile = { x: slingOrigin.x, y: slingOrigin.y, radius: 15, dragging: false, vx: 0, vy: 0, released: false };
     const gravity = 0.5;
@@ -101,38 +75,58 @@
     const scoreDisplay = document.getElementById('scoreDisplay');
     let score = 0;
 
-    canvas.addEventListener('mousedown', e => {
+    function getCanvasPos(e) {
       const rect = canvas.getBoundingClientRect();
-      const offsetX = (e.clientX - rect.left) * (originalWidth / canvas.clientWidth);
-      const offsetY = (e.clientY - rect.top) * (originalHeight / canvas.clientHeight);
+      const x = (e.clientX || e.touches?.[0].clientX) - rect.left;
+      const y = (e.clientY || e.touches?.[0].clientY) - rect.top;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: x * scaleX,
+        y: y * scaleY
+      };
+    }
 
-      const dx = offsetX - projectile.x;
-      const dy = offsetY - projectile.y;
+    function handleStart(e) {
+      const { x, y } = getCanvasPos(e);
+      const dx = x - projectile.x;
+      const dy = y - projectile.y;
       if (Math.sqrt(dx * dx + dy * dy) < projectile.radius) {
         projectile.dragging = true;
         projectile.released = false;
         hitCard.style.display = 'none';
       }
-    });
+    }
 
-    canvas.addEventListener('mousemove', e => {
+    function handleMove(e) {
       if (projectile.dragging) {
-        const rect = canvas.getBoundingClientRect();
-        const offsetX = (e.clientX - rect.left) * (originalWidth / canvas.clientWidth);
-        const offsetY = (e.clientY - rect.top) * (originalHeight / canvas.clientHeight);
-        projectile.x = offsetX;
-        projectile.y = offsetY;
+        e.preventDefault(); // mencegah scrolling saat drag
+        const { x, y } = getCanvasPos(e);
+        projectile.x = x;
+        projectile.y = y;
       }
-    });
+    }
 
-    canvas.addEventListener('mouseup', () => {
+    function handleEnd(e) {
       if (projectile.dragging) {
-        projectile.vx = (slingOrigin.x - projectile.x) * 0.2;
-        projectile.vy = (slingOrigin.y - projectile.y) * 0.2;
+        const dx = slingOrigin.x - projectile.x;
+        const dy = slingOrigin.y - projectile.y;
+        projectile.vx = dx * 0.2;
+        projectile.vy = dy * 0.2;
         projectile.dragging = false;
         projectile.released = true;
       }
-    });
+    }
+
+    // Mouse support
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('mouseup', handleEnd);
+
+    // Touch support
+    canvas.addEventListener('touchstart', handleStart);
+    canvas.addEventListener('touchmove', handleMove, { passive: false });
+    canvas.addEventListener('touchend', handleEnd);
 
     function drawTarget() {
       ctx.fillStyle = '#32cd32';
@@ -222,7 +216,10 @@
           }, 1000);
         }
 
-        if (projectile.x < 0 || projectile.x > canvas.width || projectile.y > canvas.height) {
+        if (
+          projectile.x < -50 || projectile.x > canvas.width + 50 ||
+          projectile.y > canvas.height + 50
+        ) {
           resetProjectile();
         }
       }
