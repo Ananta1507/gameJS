@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Ketapel - 32Group</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: sans-serif;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1f1f1f, #383838);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+    canvas {
+      max-width: 95vw;
+      max-height: 80vh;
+      width: 800px;
+      height: 600px;
+      border: 2px solid #32cd32;
+      background: #222;
+      border-radius: 8px;
+    }
+    .card {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #32cd32;
+      color: #000;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      display: none;
+      font-weight: bold;
+      font-size: 1rem;
+      box-shadow: 0 0 15px #32cd32;
+      z-index: 10;
+    }
+    .score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      border: 2px solid #32cd32;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div class="card" id="hitCard">🎉 Target Hit!</div>
+  <div class="score" id="scoreDisplay">Skor: 0</div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const originalWidth = 800;
+    const originalHeight = 600;
+
+    function resizeCanvas() {
+      const ratio = originalWidth / originalHeight;
+      const w = window.innerWidth * 0.95;
+      const h = window.innerHeight * 0.8;
+      let newWidth, newHeight;
+
+      if (w / h < ratio) {
+        newWidth = w;
+        newHeight = w / ratio;
+      } else {
+        newHeight = h;
+        newWidth = h * ratio;
+      }
+
+      canvas.style.width = `${newWidth}px`;
+      canvas.style.height = `${newHeight}px`;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const slingOrigin = { x: 150, y: 300 };
+    const projectile = { x: slingOrigin.x, y: slingOrigin.y, radius: 15, dragging: false, vx: 0, vy: 0, released: false };
+    const gravity = 0.5;
+    const damping = 0.99;
+
+    const target = { x: 600, y: 400, width: 80, height: 100, thickness: 10 };
+    const hitCard = document.getElementById('hitCard');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    let score = 0;
+
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const offsetX = (e.clientX - rect.left) * (originalWidth / canvas.clientWidth);
+      const offsetY = (e.clientY - rect.top) * (originalHeight / canvas.clientHeight);
+
+      const dx = offsetX - projectile.x;
+      const dy = offsetY - projectile.y;
+      if (Math.sqrt(dx * dx + dy * dy) < projectile.radius) {
+        projectile.dragging = true;
+        projectile.released = false;
+        hitCard.style.display = 'none';
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      if (projectile.dragging) {
+        const rect = canvas.getBoundingClientRect();
+        const offsetX = (e.clientX - rect.left) * (originalWidth / canvas.clientWidth);
+        const offsetY = (e.clientY - rect.top) * (originalHeight / canvas.clientHeight);
+        projectile.x = offsetX;
+        projectile.y = offsetY;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (projectile.dragging) {
+        projectile.vx = (slingOrigin.x - projectile.x) * 0.2;
+        projectile.vy = (slingOrigin.y - projectile.y) * 0.2;
+        projectile.dragging = false;
+        projectile.released = true;
+      }
+    });
+
+    function drawTarget() {
+      ctx.fillStyle = '#32cd32';
+      ctx.fillRect(target.x, target.y, target.thickness, target.height);
+      ctx.fillRect(target.x + target.width - target.thickness, target.y, target.thickness, target.height);
+      ctx.fillRect(target.x, target.y + target.height - target.thickness, target.width, target.thickness);
+
+      ctx.beginPath();
+      ctx.moveTo(target.x + target.thickness, target.y + target.height - target.thickness);
+      ctx.lineTo(target.x + target.width - target.thickness, target.y + target.height - target.thickness);
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    function drawProjectile() {
+      ctx.beginPath();
+      ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+
+    function drawAimLine() {
+      if (projectile.dragging) {
+        ctx.beginPath();
+        ctx.moveTo(slingOrigin.x, slingOrigin.y);
+        ctx.lineTo(projectile.x, projectile.y);
+        ctx.strokeStyle = '#32cd32';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        drawTrajectory((slingOrigin.x - projectile.x) * 0.2, (slingOrigin.y - projectile.y) * 0.2);
+      }
+    }
+
+    function drawTrajectory(vx, vy) {
+      let x = projectile.x;
+      let y = projectile.y;
+      let tempVx = vx;
+      let tempVy = vy;
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(50, 205, 50, 0.5)';
+      for (let i = 0; i < 60; i++) {
+        x += tempVx;
+        y += tempVy;
+        tempVy += gravity;
+        tempVx *= damping;
+        tempVy *= damping;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    function detectHit() {
+      const withinX = projectile.x > target.x + target.thickness &&
+                      projectile.x < target.x + target.width - target.thickness;
+      const atBottom = projectile.y + projectile.radius >= target.y + target.height - target.thickness &&
+                       projectile.y - projectile.radius < target.y + target.height;
+      return withinX && atBottom;
+    }
+
+    function resetProjectile() {
+      projectile.x = slingOrigin.x;
+      projectile.y = slingOrigin.y;
+      projectile.vx = 0;
+      projectile.vy = 0;
+      projectile.released = false;
+    }
+
+    function update() {
+      if (projectile.released) {
+        projectile.vy += gravity;
+        projectile.x += projectile.vx;
+        projectile.y += projectile.vy;
+        projectile.vx *= damping;
+        projectile.vy *= damping;
+
+        if (detectHit()) {
+          score += 100;
+          scoreDisplay.textContent = 'Skor: ' + score;
+          hitCard.style.display = 'block';
+          setTimeout(() => {
+            hitCard.style.display = 'none';
+            resetProjectile();
+          }, 1000);
+        }
+
+        if (projectile.x < 0 || projectile.x > canvas.width || projectile.y > canvas.height) {
+          resetProjectile();
+        }
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawTarget();
+      drawProjectile();
+      drawAimLine();
+    }
+
+    function gameLoop() {
+      update();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
