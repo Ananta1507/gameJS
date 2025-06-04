@@ -11,22 +11,31 @@
       box-sizing: border-box;
       font-family: sans-serif;
     }
-    html, body {
-      width: 100%;
-      height: 100%;
+    body {
       background: linear-gradient(135deg, #1f1f1f, #383838);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
       color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 10px;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     canvas {
       border: 2px solid #32cd32;
       background: #222;
       border-radius: 8px;
-      width: 95vw;
-      height: 80vh;
+      width: 100%;
+      height: auto;
+      max-height: 80vh;
       touch-action: none;
     }
     .card {
@@ -35,29 +44,30 @@
       right: 10px;
       background: #32cd32;
       color: #000;
-      padding: 0.8rem 1rem;
-      border-radius: 10px;
-      display: none;
-      font-weight: bold;
-      font-size: 1rem;
-      box-shadow: 0 0 15px #32cd32;
-      z-index: 10;
-    }
-    .score {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.5);
       padding: 0.6rem 1rem;
       border-radius: 10px;
-      font-size: 1rem;
       font-weight: bold;
-      border: 2px solid #32cd32;
       z-index: 10;
+      box-shadow: 0 0 15px #32cd32;
+      display: none;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 960px;
+    }
+    .score {
+      background: rgba(0,0,0,0.5);
+      border: 2px solid #32cd32;
+      padding: 0.6rem 1rem;
+      border-radius: 10px;
+      font-weight: bold;
     }
     .reset-btn {
-      margin-top: 15px;
-      padding: 0.5rem 1rem;
+      padding: 0.6rem 1.2rem;
       background: #32cd32;
       color: #000;
       border: none;
@@ -65,6 +75,7 @@
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 0 10px #32cd32;
+      margin-left: 10px;
     }
     .reset-btn:hover {
       background: #28a428;
@@ -72,20 +83,36 @@
     footer {
       margin-top: 10px;
       font-size: 0.9rem;
-      color: #aaa;
+      color: #ccc;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="800" height="600"></canvas>
-  <div class="card" id="hitCard">🎉 Target Hit!</div>
-  <div class="score" id="scoreDisplay">Skor: 0</div>
-  <button class="reset-btn" onclick="resetScore()">🔄 Reset Skor</button>
-  <footer>Created by D.Ananta</footer>
+  <div id="gameContainer">
+    <div class="top-bar">
+      <div class="score" id="scoreDisplay">Skor: 0</div>
+      <button class="reset-btn" onclick="resetScore()">🔄 Reset Skor</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="card" id="hitCard">🎉 Target Hit!</div>
+    <footer>Created by D.Ananta</footer>
+  </div>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const container = document.getElementById('gameContainer');
+      const rect = container.getBoundingClientRect();
+      const scale = Math.min(rect.width / 800, rect.height / 600);
+      canvas.width = 800;
+      canvas.height = 600;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     const slingOrigin = { x: 150, y: 300 };
     const projectile = { x: slingOrigin.x, y: slingOrigin.y, radius: 15, dragging: false, vx: 0, vy: 0, released: false };
