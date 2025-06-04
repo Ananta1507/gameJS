@@ -18,6 +18,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      flex-direction: column;
       color: #fff;
     }
     canvas {
@@ -54,12 +55,33 @@
       border: 2px solid #32cd32;
       z-index: 10;
     }
+    .reset-btn {
+      margin-top: 15px;
+      padding: 0.5rem 1rem;
+      background: #32cd32;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #32cd32;
+    }
+    .reset-btn:hover {
+      background: #28a428;
+    }
+    footer {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="800" height="600"></canvas>
   <div class="card" id="hitCard">🎉 Target Hit!</div>
   <div class="score" id="scoreDisplay">Skor: 0</div>
+  <button class="reset-btn" onclick="resetScore()">🔄 Reset Skor</button>
+  <footer>Created by D.Ananta</footer>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
@@ -100,7 +122,7 @@
 
     function handleMove(e) {
       if (projectile.dragging) {
-        e.preventDefault(); // mencegah scrolling saat drag
+        e.preventDefault();
         const { x, y } = getCanvasPos(e);
         projectile.x = x;
         projectile.y = y;
@@ -118,12 +140,9 @@
       }
     }
 
-    // Mouse support
     canvas.addEventListener('mousedown', handleStart);
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('mouseup', handleEnd);
-
-    // Touch support
     canvas.addEventListener('touchstart', handleStart);
     canvas.addEventListener('touchmove', handleMove, { passive: false });
     canvas.addEventListener('touchend', handleEnd);
@@ -133,7 +152,6 @@
       ctx.fillRect(target.x, target.y, target.thickness, target.height);
       ctx.fillRect(target.x + target.width - target.thickness, target.y, target.thickness, target.height);
       ctx.fillRect(target.x, target.y + target.height - target.thickness, target.width, target.thickness);
-
       ctx.beginPath();
       ctx.moveTo(target.x + target.thickness, target.y + target.height - target.thickness);
       ctx.lineTo(target.x + target.width - target.thickness, target.y + target.height - target.thickness);
@@ -196,6 +214,12 @@
       projectile.vx = 0;
       projectile.vy = 0;
       projectile.released = false;
+    }
+
+    function resetScore() {
+      score = 0;
+      scoreDisplay.textContent = 'Skor: ' + score;
+      resetProjectile();
     }
 
     function update() {
